@@ -6,25 +6,32 @@ import pandas as pd #<--------------------------Import Pandas for data preproces
 import plotly.express as px  #<-----------------Import  Plotly Express for data visualization
 
 #***************************************BUILDING THE INPUT WIDGETS, TABS AND SIDEBAR***************************************
-tab_1, tab_2,tab_3 = st.tabs(['VISUALIZATION','PREDICTION AND DOWNLOAD','ABOUT APPLICATION'])#<--- Creation of three tabs
+tab_2, tab_1,tab_3 = st.tabs(['DATAFRAME AND DOWNLOAD','VIEW PREDICTION','ABOUT APPLICATION'])#<--- Creation of three tabs
 
-tab_1.title("WEATHER FEATURES VISUALIZATION") #<------ Title for First Tab
-tab_2.title("WEATHER FEATURES PREDICTION") #<--------- Title for Second Tab
+tab_2.title("WEATHER FEATURES VISUALIZATION") #<------ Title for First Tab
+tab_1.title("WEATHER FEATURES PREDICTION") #<--------- Title for Second Tab
 tab_3.title("ABOUT APPLICATION") #<--------------------Title for Third Tab
-start = st.sidebar.date_input("Input the start date from 2016") #<---------- Input Widget for the start date
-start_date = pd.to_datetime(start) # <-------------------------------------- Convert Start date to a date time format
-end = st.sidebar.date_input("Input the end date later than the start date") #<---------- Input widget for the end date
-if end == start_date : # <---------------------- Conditional Statement to check if the end date is equal to start date
-    option = st.sidebar.selectbox("Tick how you want to forecast", ('forward','backward')) # Code to select prediction option.
-    if option == 'forward' : # <---------------- Condition for forward prediction.
-        steps = int(st.sidebar.number_input("Input The days to extend to", 0)) # <----- Number of days to predict forward
-        end_date = start_date + pd.DateOffset(days = steps) # <----- Set end date for forward prediction
-    elif option == 'backward' : # <-------------- Condition for backward prediction
-        steps = int(st.sidebar.number_input("Input The days to extend from, not later than 2000 days", 0)) # Days to predict backward
-        start_date = start_date - pd.DateOffset(days = steps) # Start date for backward prediction
-        end_date = pd.to_datetime(end) # <------------------- End date for backward prediction
-else : # <------------------------- If end and start date are not the same
-    end_date = pd.to_datetime(end) # <------------------ Set end date
+
+pred_type = st.sidebar.selectbox("Select for prediction type, Either Single or Multiple",('single','multiple'))# Widget for prediction type
+if pred_type == 'multiple' : # <------------------ Condition for multiple predictions
+    start = st.sidebar.date_input("Input the start date from 2016") #<---------- Input Widget for the start date
+    start_date = pd.to_datetime(start) # <-------------------------------------- Convert Start date to a date time format
+    end = st.sidebar.date_input("Input the end date later than the start date") #<---------- Input widget for the end date
+    if end == start_date : # <---------------------- Conditional Statement to check if the end date is equal to start date
+        option = st.sidebar.selectbox("Tick how you want to forecast", ('forward','backward')) # Code to select prediction option.
+        if option == 'forward' : # <---------------- Condition for forward prediction.
+            steps = int(st.sidebar.number_input("Input The days to extend to", 0)) # <----- Number of days to predict forward
+            end_date = start_date + pd.DateOffset(days = steps) # <----- Set end date for forward prediction
+        elif option == 'backward' : # <-------------- Condition for backward prediction
+            steps = int(st.sidebar.number_input("Input The days to extend from, not later than 2000 days", 0)) # Days to predict backward
+            start_date = start_date - pd.DateOffset(days = steps) # Start date for backward prediction
+            end_date = pd.to_datetime(end) # <------------------- End date for backward prediction
+    else : # <------------------------- If end and start date are not the same
+        end_date = pd.to_datetime(end) # <------------------ Set end date
+else : # <------------------- Condition if not a multiple prediction
+    date = st.sidebar.date_input("Input the date to predict") # <----------- Date input for a single prediction
+    start_date = date # <------------------ Start date for a single prediction
+    end_date = date # <----------------- End date for a single prediction
 choice = st.sidebar.multiselect("Which Weather Factors Do you Select ?",["Temperature","Humidity","Wind Speed",'Pressure'],['Temperature'])# Choose weather factors
 
 # ************************************************ BACKEND CODES ******************************************
@@ -46,64 +53,71 @@ def Forecast(model, start, end) : # <--------- Forecast function definition
     '''
     The Forecast function performs the tasks of making forecast/prediction.
     It create a dataframe from the predictions with flexible columns depending on the number of multiple choice with date as the index column.
-    It creates four plots which include line plot, bar plot, area plot and density contour plot.
     It takes three input parameters which are a model for prediction, a start date and an end date.
     It returns a dataframe
     '''
     df = pd.DataFrame() # <------------ Create an empty dataframe
-    for i in model : # <------------- Loop through the choices
-        if i == 'Temperature' : # <------------- Condition for temperature
-            pred = temp.get_prediction(start = pd.to_datetime(start), end = pd.to_datetime(end)) # Make prediction
-            mean_disp = pred.predicted_mean # <---------- Create series from predicted values
-            mean_df = mean_disp.to_frame() # <----------- Convert series to data frame
-            mean_df.reset_index(inplace = True) # <------- Reset the data frame's index
-            mean_df.columns = ['Date','Temperature'] # <-------- Rename the dataframe's column
-            mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name() # Create additional month column from the date column
-            if df.empty == True : # <----------- Condition to check for empty dataframe
-                mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name() # <----- Create month column for empty dataframe
-                df['Date'] = mean_df['Date'] # <-------- Add date column to the dataframe
-                df['Temperature (degree C)'] = mean_df['Temperature'] # <--------- Add temperature column to the data frame
-            else : # <----- Condition if dataframe is not empty
-                df['Temperature (degree C)'] = mean_df['Temperature'] # <---------- Add temperature column to the data frame
-        if i == 'Humidity' : # <----------- Condition for humidity 
-            pred = humidity.get_prediction(start = pd.to_datetime(start), end = pd.to_datetime(end))
-            mean_disp = pred.predicted_mean
-            mean_df = mean_disp.to_frame()
-            mean_df.reset_index(inplace = True)
-            mean_df.columns = ['Date','Humidity']
+    if 'Temperature' in model : # <------------- Condition for temperature
+        pred = temp.get_prediction(start = pd.to_datetime(start), end = pd.to_datetime(end)) # Make prediction
+        mean_disp = pred.predicted_mean # <---------- Create series from predicted values
+        mean_df = mean_disp.to_frame() # <----------- Convert series to data frame
+        mean_df.reset_index(inplace = True) # <------- Reset the data frame's index
+        mean_df.columns = ['Date','Temperature'] # <-------- Rename the dataframe's column
+        mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name() # Create additional month column from the date column
+        if df.empty == True : # <----------- Condition to check for empty dataframe
+            mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name() # <----- Create month column for empty dataframe
+            df['Date'] = mean_df['Date'] # <-------- Add date column to the dataframe
+            df['Temperature (degree C)'] = mean_df['Temperature'] # <--------- Add temperature column to the data frame
+        else : # <----- Condition if dataframe is not empty
+            df['Temperature (degree C)'] = mean_df['Temperature'] # <---------- Add temperature column to the data frame
+    if 'Humidity' in model : # <----------- Condition for humidity 
+        pred = humidity.get_prediction(start = pd.to_datetime(start), end = pd.to_datetime(end))
+        mean_disp = pred.predicted_mean
+        mean_df = mean_disp.to_frame()
+        mean_df.reset_index(inplace = True)
+        mean_df.columns = ['Date','Humidity']
+        mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name()
+        if df.empty == True :
             mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name()
-            if df.empty == True :
-                mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name()
-                df['Date'] = mean_df['Date']
-                df['Humidity (g/m3)'] = mean_df['Humidity'] # <----------- Add Humidity column to the dataframe
-            else :
-                df['Humidity (g/m3)'] = mean_df['Humidity'] # <----------- Add Humidity column to the dataframe
-        if i == 'Wind Speed' : # <----------- Condition for wind speed
-            pred = wind.get_prediction(start = start, end = end)
-            mean_disp = pred.predicted_mean
-            mean_df = mean_disp.to_frame()
-            mean_df.reset_index(inplace = True)
-            mean_df.columns = ['Date','wind']
+            df['Date'] = mean_df['Date']
+            df['Humidity (g/m3)'] = mean_df['Humidity'] # <----------- Add Humidity column to the dataframe
+        else :
+            df['Humidity (g/m3)'] = mean_df['Humidity'] # <----------- Add Humidity column to the dataframe
+    if 'Wind Speed' in model : # <----------- Condition for wind speed
+        pred = wind.get_prediction(start = start, end = end)
+        mean_disp = pred.predicted_mean
+        mean_df = mean_disp.to_frame()
+        mean_df.reset_index(inplace = True)
+        mean_df.columns = ['Date','wind']
+        mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name()
+        if df.empty == True :
             mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name()
-            if df.empty == True :
-                mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name()
-                df['Date'] = mean_df['Date']
-                df['wind (m/min)'] = mean_df['wind'] *16.6667 # Multiply the column by 16.6667 then add the column to the dataframe
-            else :
-                df['wind (m/min)'] = mean_df['wind'] * 16.6667 # Multiply the column by 16.6667 then add the column to the dataframe
-        if i == 'Pressure' : # <-------------- Condition for pressure
-            pred = pressure.get_prediction(start = pd.to_datetime(start), end = pd.to_datetime(end))
-            mean_disp = pred.predicted_mean
-            mean_df = mean_disp.to_frame()
-            mean_df.reset_index(inplace = True)
-            mean_df.columns = ['Date','pressure']
+            df['Date'] = mean_df['Date']
+            df['wind (m/min)'] = mean_df['wind'] *16.6667 # Multiply the column by 16.6667 then add the column to the dataframe
+        else :
+            df['wind (m/min)'] = mean_df['wind'] * 16.6667 # Multiply the column by 16.6667 then add the column to the dataframe
+    if 'Pressure' in model : # <-------------- Condition for pressure
+        pred = pressure.get_prediction(start = pd.to_datetime(start), end = pd.to_datetime(end))
+        mean_disp = pred.predicted_mean
+        mean_df = mean_disp.to_frame()
+        mean_df.reset_index(inplace = True)
+        mean_df.columns = ['Date','pressure']
+        mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name()
+        if df.empty == True :
             mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name()
-            if df.empty == True :
-                mean_df['Month'] = pd.to_datetime(mean_df['Date']).dt.month_name()
-                df['Date'] = mean_df['Date']
-                df['pressure (MPa)'] = mean_df['pressure'] * 0.1013 # Multiply column by 0.1013, then add column to the dataframe
-            else :
-                df['pressure (MPa)'] = mean_df['pressure'] * 0.1013 # Multiply column by 0.1013, then add column to the dataframe
+            df['Date'] = mean_df['Date']
+            df['pressure (MPa)'] = mean_df['pressure'] * 0.1013 # Multiply column by 0.1013, then add column to the dataframe
+        else :
+            df['pressure (MPa)'] = mean_df['pressure'] * 0.1013 # Multiply column by 0.1013, then add column to the dataframe
+    
+    return df # <------------------ Return the dataframe.
+
+def Plots(dataframe) :
+    """
+    It creates four plots which include line plot, bar plot, area plot and density contour plot from a data frame
+    It takes in a data frame as a parameter
+    It has no return value.
+    """
     with st.expander("Click to view the line plot") : # <-------------- Create an expander for line plot
         st.write("The Line plot for the weather features") # <--------- Write in the created expander
         fig = px.line(df, x= 'Date', y= df.columns[1:]) # <--- Create a line plot of all weather features in the dataframe against the date
@@ -120,13 +134,35 @@ def Forecast(model, start, end) : # <--------- Forecast function definition
         st.write("The Density Contour plot for the weather features") # <--------- Write in the created expander
         fig = px.density_contour(df, x= 'Date', y= df.columns[1:]) # Create a Density Contour plot of all weather features in the dataframe against the date
         st.plotly_chart(fig, use_container_width=True)
-    
-    return df # <------------------ Return the dataframe.
+
+def Single_pred(dataframe) : # <---------------- Function definition
+    """
+    The Single_pred function is used to view single prediction results for all the weather factors.
+    The values are displayed as the user choose.
+    It takes in dataframe as parameter
+    It gives no return value
+    """
+    st.subheader("Date") # <----------------------- Code for subheader
+    st.write(f"The date is {df['Date'][0]}") # <--------------------- Code to output the date
+    if "Temperature (degree C)" in df.columns : # <------------------ Condition for temperature
+        st.write(f'The temperature value is {round(df["Temperature (degree C)"][0],4)} degree celcius') # Code to output the temperature value
+    if "Humidity (g/m3)" in df.columns : # <------------------ Condition for humidity
+        st.write(f'The value of humidity is {round(df["Humidity (g/m3)"][0],4)} gram per cubic meter') # Code to output the humidity value
+    if "wind (m/min)" in df.columns : # <------------------ Condition for wind speed
+        st.write(f'The value for Windspeed is {round(df["wind (m/min)"][0],4)} meter per minute') # Code to output the wind speed value
+    if "pressure (MPa)" in df.columns : # <------------------ Condition for pressure
+        st.write(f'The value for Pressure is {round(df["pressure (MPa)"][0], 4)} Mega Pascal') # Code to output the pressure value
+
 
 #******************************************************* OUTPUT FRONTEND CODES *********************************************************
 
 with tab_1 : # <------------------------- Declare tab 1 container
-    df = Forecast(choice, start_date, end_date) # <---------------- Call Forecast function in tab 1.  
+    if pred_type == 'single' : # <-------------- code to check for single prediction
+        df = Forecast(choice, start_date, end_date) # <---------------- Call Forecast function in tab 1. 
+        Single_pred(df) # <---------------------- Call to display single prediction values
+    else : # <-------------------- Code if not single prediction
+        df = Forecast(choice, start_date, end_date) # <---------------- Call Forecast function
+        Plots(df) # <------------- Call for plots
 
 tab_2.dataframe(df) # <--------------- Display the dataframe on tab2
 @st.cache # <------------- IMPORTANT: Cache the conversion to prevent computation on every rerun
@@ -173,13 +209,17 @@ tab_3.write(
     The Input widgets consist of date input type which is in a calender format with a drop down comprising the year, month and days in the months , 
     they are considered as the start date and end date , the date widgets have a default value of the day's date. 
 
+    There is a widget to select the prediction type either single or multiple.
+
      There is the number input widget that serves as an alternative when considering number of days to forecast / predict ,it is only provided
      when the start date and end date is the same ,it has a default value of zero.
+
+     There is a widget to input date for single prediction.
 
     The option widget if a select box dropdown, with option to choose for either a forward or backward prediction. Its default is forward .
     The multi select widget drop down can select multiple choice, It selects for the prefered weather features to predict, visualize and
     download as a data frame at a time. Its default value is Temprature.
-    
+
     All the input widgets are contained in the sidebar
     """
 )
@@ -187,14 +227,16 @@ tab_3.subheader("ABOUT OUTPUT WIDGETS")
 tab_3.write(
     """
     The Output widgets are in tabs .
-    Tab 1 the VISUALIZATION tab contains graphs and plots of the predictions. The graphs are in expanders that include the Line plot , Bar chart ,
+
+    Tab 1  the PREDICTION AND DOWNLOAD tab, It displays the prediction dataframe and a download button option for downloading the file in a 
+    CSV format.
+
+    Tab 2 the VISUALIZATION tab contains graphs and plots of the predictions. The graphs are in expanders that include the Line plot , Bar chart ,
     stacked Area plot and stacked Density Contour plot . These variables are flexible and multiple can be selected at a time,
      it also can be activated or deactivated by clicking on their names by the top
-    right corner of Visualization tab.
+    right corner of Visualization tab, all these are for multiple predictions.
 
-
-    Tab 2  the PREDICTION AND DOWNLOAD tab, It displays the prediction dataframe and a download button option for downloading the file in a 
-    CSV format.
+    Tab 2 for single prediction displays values for the date and the selected weather factors.
 
 
     Tab 3 ABOUT APPLICATION tab, contains information on the application widgets .
