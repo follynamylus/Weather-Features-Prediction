@@ -161,8 +161,12 @@ with tab_1 : # <------------------------- Declare tab 1 container
         df = Forecast(choice, start_date, end_date) # <---------------- Call Forecast function in tab 1. 
         Single_pred(df) # <---------------------- Call to display single prediction values
     else : # <-------------------- Code if not single prediction
-        df = Forecast(choice, start_date, end_date) # <---------------- Call Forecast function
-        Plots(df) # <------------- Call for plots
+         if start_date > end_date : # <-------------- Condition if start date is greater than the end date
+            df = Forecast(choice, end_date, start_date) # <---------------- Call Forecast function
+            Plots(df) # <------------- Call for plots
+         else :
+            df = Forecast(choice, start_date, end_date) # <---------------- Call Forecast function
+            Plots(df) # <------------- Call for plots
 
 tab_2.dataframe(df) # <--------------- Display the dataframe on tab2
 @st.cache # <------------- IMPORTANT: Cache the conversion to prevent computation on every rerun
